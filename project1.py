@@ -10,8 +10,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import nltk
 from nltk.corpus import stopwords
 
-nltk.download('stopwords')
-
 # Get the list of English stop words, save unique values in a set
 STOP_WORDS = set(stopwords.words('english'))
 
@@ -52,12 +50,17 @@ def clean_terms(text):
     Description: Accept as input a term. Seperate out terms that are hypenated, remove any non alpha-numeric characters from term
     Return the cleaned term
     """
-    # Seperate out hypened words
-    cleaned_text = text.replace('-', ' ').lower()
+    # If the characters following a hypthen are numeric, remove the numbers
+    if "-" in text:
+        try:
+            if text.split('-')[1].isnumeric():
+                text = text.split('-')[0]
+        except:
+            pass
     # Remove non-alphanumeric characters
-    cleaned_text = re.sub(r'[^a-zA-Z0-9\s]', '', cleaned_text)
+    cleaned_text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
 
-    return cleaned_text
+    return cleaned_text.lower()
 
 def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback, alpha=1, beta=0.75, gamma=0.15):
     """
@@ -123,6 +126,12 @@ def search(query,target, api_key, cx, k_results=10):
     Takes user inputed API_Key, CS, query, and desired precision (real number 0-1)
     Returns query results to user for relevance feedback
     """
+    # Initialize link counters
+    ## Count valid links (HTML results based on fileFormat field
+    qualified_results = 0
+
+    ## Count relevant links indicated by user ('y')
+    relevant_links = 0 
 
     try:
         query_print_cmd(api_key, cx, query, target)
@@ -144,13 +153,6 @@ def search(query,target, api_key, cx, k_results=10):
           # Initiaize a list to store results
           relevant_results = []
           non_relevant_results = []
-
-          # Initialize link counters
-          ## Count valid links (HTML results based on fileFormat field
-          qualified_resutls = 0
-
-          ## Count relevant links indicated by user ('y')
-          relevant_links = 0 
 
           # Loop through each search result one at a time, ask user for feedback
           for i, result in enumerate(json['items'], 1):
@@ -178,24 +180,29 @@ def search(query,target, api_key, cx, k_results=10):
                         non_relevant_results.append(result['title'])
                         non_relevant_results.append(result.get('snippet'))
 
-        
           # check if there was any relevant results indicated by user, if not exit
           augmented_query = ""
-          percision = relevant_links / qualified_resutls
-          if relevant_links <= 0:
+          if qualified_results == 0:
+              print("===================================================")
+              print("FEEDBACK SUMMARY")
+              print(f"Query {query} ")
+              print(f"HTML results found: {qualified_results} ")  
+              ("No results returned. Please rewrite your query and try again.")
+              sys.exit(0)   
+          
+          # Calculate precision now that we know qualified_results will not be 0
+          percision = round((relevant_links / qualified_results),1)
+
+          if relevant_links == 0:
             print("===================================================")
             print("FEEDBACK SUMMARY")
             print(f"Query {query} ")
             print(f"Precision {percision}")
-            print(f"Still below the desired percision of {target}.")
-            print("Indexing results....")
-            print("Indexing results....")
-            print(f"Augmenting by {augmented_query} ")  
+            print(f"Number of relevant results: {relevant_links}.")
             print("Below desiered precision, but cannot augment the query with 0 relevant results")
             sys.exit(0)   
 
-          # If number of relevant results is less than 9 (score of .9)...
-            
+          # If number of relevant results is less than user inputed target, rerun search
           if percision < target:
             print("===================================================")
             print("FEEDBACK SUMMARY")
@@ -210,12 +217,12 @@ def search(query,target, api_key, cx, k_results=10):
             # Recursively call search() until desired precision is reached
             search(augmented_query, target, api_key, cx)
 
-          # Terminate code - desired precision reached
+          # Desired precision reached. Exit
           else:
             print("===================================================")
             print("FEEDBACK SUMMARY")
             print(f"Precision {percision}")
-            print(f"Desired precision reached, done.")
+            print(f"Desired precision reached.")
             sys.exit(0)
 
     except Exception as e:
@@ -228,14 +235,13 @@ def query_print_cmd(api_key, cx, query, percision):
     Query Print CMD
     Description: Display user input from the command line
     """
-    print(f"""Parameters:\n
-    Client Key = {api_key}\n
-    Engine Key = {cx}\n
-    Query      = {query}\n
-    Precision  = {percision}\n
-    Google Search Results:
-    ======================
-    """)
+    print('Parameters:')
+    print(f"Client Key = {api_key}")
+    print(f"Engine Key = {cx}")
+    print(f"Query      = {query}")
+    print(f"Precision  = {percision}")
+    print(f"Google Search Results:")
+    print("======================")
 
 def main():
     # Read in the required keys, precision, and query from command-line
@@ -246,4 +252,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
