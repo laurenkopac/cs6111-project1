@@ -2,8 +2,11 @@
 import requests
 import sys
 import string
+import re
 
-## Import the nltk library for a list of enlish stop words
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+## Import the nltk library for a list of english stop-words
 import nltk
 from nltk.corpus import stopwords
 
@@ -13,37 +16,51 @@ nltk.download('stopwords')
 STOP_WORDS = set(stopwords.words('english'))
 
 def cmd_line():
+    """
+    Relevance Feedback Function
+    Description:
+
+    """
     # Check if the correct number of command line arguments is provided
     if len(sys.argv) != 5:
         print("Usage: python3 feedback.py <google api key> <google engine id> <precision> <query in quotation>")
         sys.exit(1)
 
     # Extract command line arguments: google api key, google engine key, precision, and query
-    google_api_key = sys.argv[1]
+    json_api_key = sys.argv[1]
     google_engine_id = sys.argv[2]
     
     try:
         target = float(sys.argv[3])
         if not (0 < target < 1):
-            raise ValueError("precision must be a number between 0 and 1.")
+            raise ValueError("Precision must be a number between 0 and 1.")
         
         query = sys.argv[4]
 
         if not query:
-            raise ValueError("query is empty. input a query you want to search")
+            raise ValueError("Query is empty. input a query you want to search")
   
     except ValueError as e:
         print(f"Error: {e}")
         sys.exit(1)
 
-    return google_api_key, google_engine_id, target, query
+    return json_api_key, google_engine_id, target, query
 
-"""
-Relevance Feedback Function
-Description:
+def clean_results(text):
+    """
+    Clean Results
+    """
+    cleaned_text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
+    cleaned_text = cleaned_text.replace('-', ' ').lower()
 
-"""
+    return cleaned_text
+
 def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback, alpha=1, beta=0.75, gamma=0.15):
+    """
+    Relevance Feedback Function
+    Description:
+
+    """
 
     original_query = [term.lower() for text in original_query for term in text.split()]
     relevant_feedback = [term.lower().split('-')[0].split(',')[0].split('.')[0] for text in relevant_feedback for term in text.split() if ((term not in STOP_WORDS) & (len(term) > 1) & (term not in string.punctuation) & (term != "..."))]
@@ -95,12 +112,13 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
     return new_augmented_terms, augmented_query
 
 
-"""
-Search Function
-Description:
-
-"""
 def search(query,target, api_key, cx, k_results=10):
+    """
+    Search Function
+    Description: API call to JSON API for Google Search results for user inputed query
+    Takes user inputed API_Key, CS, query, and desired precision (real number 0-1)
+    Returns query results to user for relevance feedback
+    """
 
     try:
         query_print_cmd(api_key, cx, query, target)
@@ -114,7 +132,6 @@ def search(query,target, api_key, cx, k_results=10):
         }
 
         # Perform a Google search using the requests package
-
         response = requests.get(url, params=params)
         json = response.json()
 
@@ -124,37 +141,43 @@ def search(query,target, api_key, cx, k_results=10):
           relevant_results = []
           non_relevant_results = []
 
-          # Initialize relevant link counter
-          ## Tracks user input "Y"
-          ## Resets with each call to google following relevance feedback
-          relevant_links = 0
+          # Initialize link counters
+          ## Count valid links (HTML results based on fileFormat field
+          qualified_resutls = 0
+
+          ## Count relevant links indicated by user ('y')
+          relevant_links = 0 
 
           # Loop through each search result one at a time, ask user for feedback
           for i, result in enumerate(json['items'], 1):
-                print(f"Result {i}")
-                print("[")
-                print(f"URL: {result['link']}")
-                print(f"Title: {result['title']}")
-                print(f"Summary: {result.get('snippet', 'No summary available')}")
-                print("]")
-                print()
-                feedback = input("Relevant (Y/N)? ")
+                # Return only HTML results for user
+                    if result.get('fileFormat') is None:
+                        # Increase qualified results counter
+                        qualified_results += 1
+                        print(f"Result {i}")
+                        print("[")
+                        print(f"URL: {result['link']}")
+                        print(f"Title: {result['title']}")
+                        print(f"Summary: {result.get('snippet', 'No summary available')}")
+                        print("]")
+                        print()
+                        feedback = input("Relevant (Y/N)? ")
 
-                # Convert feedback to lower in case user enters inconsistently
-                ## If user indicates relevant link - save title to relevant list
-                if feedback.lower() == 'y':
-                  relevant_links += 1
-                  relevant_results.append(result['title'])
-                  relevant_results.append(result.get('snippet'))
+                    # Convert feedback to lower in case user enters inconsistently, remove accidental spaces
+                    ## If user indicates relevant link - save title to relevant list
+                    if feedback.strip().lower() == 'y':
+                        relevant_links += 1
+                        relevant_results.append(result['title'])
+                        relevant_results.append(result.get('snippet'))
 
-                else:
-                  non_relevant_results.append(result['title'])
-                  non_relevant_results.append(result.get('snippet'))
+                    else:
+                        non_relevant_results.append(result['title'])
+                        non_relevant_results.append(result.get('snippet'))
 
         
           # check if there was any relevant results indicated by user, if not exit
           augmented_query = ""
-          percision = relevant_links / 10
+          percision = relevant_links / qualified_resutls
           if relevant_links <= 0:
             print("===================================================")
             print("FEEDBACK SUMMARY")
@@ -164,7 +187,7 @@ def search(query,target, api_key, cx, k_results=10):
             print("Indexing results....")
             print("Indexing results....")
             print(f"Augmenting by {augmented_query} ")  
-            print("Below desiered precision, but can no longer augment the query")
+            print("Below desiered precision, but cannot augment the query with 0 relevant results")
             sys.exit(0)   
 
           # If number of relevant results is less than 9 (score of .9)...
@@ -196,34 +219,27 @@ def search(query,target, api_key, cx, k_results=10):
       print(f"Error: {e}")
       sys.exit(1)
 
-"""
-Query Print CMD
-Description:
-
-"""
 def query_print_cmd(api_key, cx, query, percision):
-  print(f"""Parameters:\n
-Client Key = {api_key}\n
-Engine Key = {cx}\n
-Query      = {query}\n
-Precision  = {percision}\n
-Google Search Results:
-======================
-""")
+    """
+    Query Print CMD
+    Description: Display user input from the command line
+    """
+    print(f"""Parameters:\n
+    Client Key = {api_key}\n
+    Engine Key = {cx}\n
+    Query      = {query}\n
+    Precision  = {percision}\n
+    Google Search Results:
+    ======================
+    """)
 
 def main():
-    
-    #read in the required keys and precision and query from command-line
+    # Read in the required keys, precision, and query from command-line
     api_key, cx, target, query = cmd_line()
-   
-   #TODO: DELETE
-    # print("Google API Key:", api_key)
-    # print("Google Engine ID:", cx)
-    # print("Precision:", precision)
-    # print("Query:", query)
 
-    # start the intial relevance search
+    # Initiate search with user input
     search(query, target, api_key, cx)
 
 if __name__ == "__main__":
     main()
+    
