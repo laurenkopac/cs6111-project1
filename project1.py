@@ -32,8 +32,8 @@ def cmd_line():
     
     try:
         target = float(sys.argv[3])
-        if not (0 < target < 1):
-            raise ValueError("Precision must be a number between 0 and 1.")
+        if not (0 < target <= 1):
+            raise ValueError("Precision must be a number greater than 0 and less than/equal to 1.")
         
         query = sys.argv[4]
 
@@ -46,12 +46,16 @@ def cmd_line():
 
     return json_api_key, google_engine_id, target, query
 
-def clean_results(text):
+def clean_terms(text):
     """
     Clean Results
+    Description: Accept as input a term. Seperate out terms that are hypenated, remove any non alpha-numeric characters from term
+    Return the cleaned term
     """
-    cleaned_text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
-    cleaned_text = cleaned_text.replace('-', ' ').lower()
+    # Seperate out hypened words
+    cleaned_text = text.replace('-', ' ').lower()
+    # Remove non-alphanumeric characters
+    cleaned_text = re.sub(r'[^a-zA-Z0-9\s]', '', cleaned_text)
 
     return cleaned_text
 
@@ -63,8 +67,8 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
     """
 
     original_query = [term.lower() for text in original_query for term in text.split()]
-    relevant_feedback = [term.lower().split('-')[0].split(',')[0].split('.')[0] for text in relevant_feedback for term in text.split() if ((term not in STOP_WORDS) & (len(term) > 1) & (term not in string.punctuation) & (term != "..."))]
-    non_relevant_feedback = [term.lower().split('-')[0].split(',')[0].split('.')[0] for text in non_relevant_feedback for term in text.split() if ((term not in STOP_WORDS) & (len(term) > 1) & (term not in string.punctuation) & (term != "..."))]
+    relevant_feedback = [clean_terms(term) for text in relevant_feedback for term in text.split() if ((term not in STOP_WORDS) & (len(term) > 1) & (term not in string.punctuation) & (term != "..."))]
+    non_relevant_feedback = [clean_terms(term) for text in non_relevant_feedback for term in text.split() if ((term not in STOP_WORDS) & (len(term) > 1) & (term not in string.punctuation) & (term != "..."))]
 
     # Initalize dictionary for relevant term frequencies
     frequency_count = {}
