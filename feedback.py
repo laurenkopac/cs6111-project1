@@ -10,6 +10,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import nltk
 from nltk.corpus import stopwords
 
+nltk.download('stopwords')
+
 # Get the list of English stop words, save unique values in a set
 STOP_WORDS = set(stopwords.words('english'))
 
@@ -62,13 +64,36 @@ def clean_terms(text):
 
     return cleaned_text.lower()
 
-def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback, alpha=1, beta=0.75, gamma=0.15):
+
+
+def calculate_tf_idf(documents):
+    #calculate the idf_score for vector
+    vectorizer = TfidfVectorizer(norm='l2', use_idf=True, analyzer='word')
+    tfidf_matrix = vectorizer.fit_transform(documents)
+
+    # get term words
+    document_word = vectorizer.get_feature_names_out()
+
+    # create term vector for all terms in the document (word:tf-idf score)
+    term_vector = dict((word, idf_score) for word, idf_score in zip(document_word, tfidf_matrix.toarray()[0]))
+
+    return term_vector
+
+def get_two_new_words(original_query,updated_query):
+    # TODO - get two new words based on updated query contains terms and weights and 
+    # find the two new words with highest tf-idf weight and add them to the original query) and find the best reordering of the new query with n-grams sklearn library (sklearn.feature_extraction.text.CountVectorizer)
+    # and return the updated query
+
+    pass
+
+def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback, alpha=1.2, beta=0.8, gamma=1):
     """
     Relevance Feedback Function
     Description:
 
     """
-
+    relevant_docs_length = len(relevant_feedback)
+    non_relevant_docs_length = len(non_relevant_feedback)
     original_query = [term.lower() for text in original_query for term in text.split()]
     relevant_feedback = [clean_terms(term) for text in relevant_feedback for term in text.split() if ((term not in STOP_WORDS) & (len(term) > 1) & (term not in string.punctuation) & (term != "..."))]
     non_relevant_feedback = [clean_terms(term) for text in non_relevant_feedback for term in text.split() if ((term not in STOP_WORDS) & (len(term) > 1) & (term not in string.punctuation) & (term != "..."))]
@@ -80,24 +105,41 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
         # Using get method to handle the case where the word is not in the dictionary
         frequency_count[term] = frequency_count.get(term, 0) + 1
 
-    # Create vectors for the original query, relevant, and non-relevant feedback
-    original_query_vector = {}
-    relevant_feedback_vector = {}
-    non_relevant_feedback_vector = {}
 
-    for term in original_query:
-        original_query_vector[term] = original_query_vector.get(term, 0) + 1
+   #TODO: DELETE THIS LATER
+    # #Create vectors for the original query, relevant, and non-relevant feedback
+    # original_query_vector = {}
+    # relevant_feedback_vector = {}
+    # non_relevant_feedback_vector = {}
 
-    for term in relevant_feedback:
-        relevant_feedback_vector[term] = relevant_feedback_vector.get(term, 0) + 1
+    # for term in original_query:
+    #     original_query_vector[term] = original_query_vector.get(term, 0) + 1
 
-    for term in non_relevant_feedback:
-        non_relevant_feedback_vector[term] = non_relevant_feedback_vector.get(term, 0) + 1
+    # for term in relevant_feedback:
+    #     relevant_feedback_vector[term] = relevant_feedback_vector.get(term, 0) + 1
+
+    # for term in non_relevant_feedback:
+    #     non_relevant_feedback_vector[term] = non_relevant_feedback_vector.get(term, 0) + 1
+
+    original_query_vector = calculate_tf_idf(original_query)
+    relevant_feedback_vector = calculate_tf_idf(relevant_feedback)
+    non_relevant_feedback_vector = calculate_tf_idf(non_relevant_feedback)
 
     # Update the query using Rocchio's algorithm
     updated_query_vector = {}
     for term in set(original_query + relevant_feedback + non_relevant_feedback):
-        term_weight = alpha * original_query_vector.get(term, 0) + beta * relevant_feedback_vector.get(term, 0) - gamma * non_relevant_feedback_vector.get(term, 0) + frequency_count.get(term,0) # give extra weight to frequent relevant terms
+
+        term_weight = (
+            alpha * original_query_vector.get(term, 0) 
+            + 
+            beta * relevant_feedback_vector.get(term, 0) * 1 / relevant_docs_length 
+
+            - 
+            gamma * non_relevant_feedback_vector.get(term, 0) * 1 / non_relevant_docs_length
+            + 
+            frequency_count.get(term,0) # give extra weight to frequent relevant terms
+            ) 
+        
         updated_query_vector[term] = max(0, term_weight)
 
     # Sort the terms by weight in descending order
@@ -135,7 +177,6 @@ def search(query,target, api_key, cx, k_results=10):
 
     try:
         query_print_cmd(api_key, cx, query, target)
-
         url = "https://www.googleapis.com/customsearch/v1"
         params = {
             "q": query,
@@ -147,10 +188,11 @@ def search(query,target, api_key, cx, k_results=10):
         # Perform a Google search using the requests package
         response = requests.get(url, params=params)
         json = response.json()
-
         # Display search results
         if 'items' in json:
           # Initiaize a list to store results
+
+          print 
           relevant_results = []
           non_relevant_results = []
 
@@ -158,6 +200,7 @@ def search(query,target, api_key, cx, k_results=10):
           for i, result in enumerate(json['items'], 1):
                 # Return only HTML results for user
                     if result.get('fileFormat') is None:
+                        print("blah123")
                         # Increase qualified results counter
                         qualified_results += 1
                         print(f"Result {i}")
@@ -171,6 +214,7 @@ def search(query,target, api_key, cx, k_results=10):
 
                     # Convert feedback to lower in case user enters inconsistently, remove accidental spaces
                     ## If user indicates relevant link - save title to relevant list
+                    print("feedback: ", feedback)
                     if feedback.strip().lower() == 'y':
                         relevant_links += 1
                         relevant_results.append(result['title'])
