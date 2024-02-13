@@ -67,6 +67,13 @@ def clean_terms(text):
 
 
 def calculate_tf_idf(documents):
+    """
+    Search Function
+    Description: Calculates tf-idf score for each word in the document 
+    Takes documents containing snippets of the api user result
+    Returns term vector as a dictionary containing the tf-idf score for each word in the document ((word:tf-idf score))
+    """
+     
     #calculate the idf_score for vector
     vectorizer = TfidfVectorizer(norm='l2', use_idf=True, analyzer='word')
     tfidf_matrix = vectorizer.fit_transform(documents)
@@ -74,14 +81,21 @@ def calculate_tf_idf(documents):
     # get term words
     document_word = vectorizer.get_feature_names_out()
 
-    # create term vector for all terms in the document (word:tf-idf score)
+    # create term vector for all terms in the document 
     term_vector = dict((word, idf_score) for word, idf_score in zip(document_word, tfidf_matrix.toarray()[0]))
 
     return term_vector
 
-def get_two_new_words(original_query,updated_query):
+def get_new_query(original_query,updated_query):
+    """
+    Two New Words Generation Function
+    Description: Generate new query by getting two new words based on weights from relevance feedback and reorder them with n-grams
+    Takes original query, the current query passed to api and updated query,  results from Rocchio's algorithm 
+    Returns new query with two new words
+    """
     # TODO - get two new words based on updated query contains terms and weights and 
-    # find the two new words with highest tf-idf weight and add them to the original query) and find the best reordering of the new query with n-grams sklearn library (sklearn.feature_extraction.text.CountVectorizer)
+    # find the two new words with highest tf-idf weight and add them to the original query) and find the best 
+    #reordering of the new query with n-grams sklearn library (sklearn.feature_extraction.text.CountVectorizer)
     # and return the updated query
 
     pass
