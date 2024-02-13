@@ -75,7 +75,7 @@ def calculate_tf_idf(documents):
     """
      
     #calculate the idf_score for vector
-    vectorizer = TfidfVectorizer(norm='l2', use_idf=True, analyzer='word')
+    vectorizer = TfidfVectorizer(analyzer='word')
     tfidf_matrix = vectorizer.fit_transform(documents)
 
     # get term words
@@ -88,7 +88,7 @@ def calculate_tf_idf(documents):
 
 def get_new_query(original_query,updated_query):
     """
-    Two New Words Generation Function
+    Get New Query Function
     Description: Generate new query by getting two new words based on weights from relevance feedback and reorder them with n-grams
     Takes original query, the current query passed to api and updated query,  results from Rocchio's algorithm 
     Returns new query with two new words
@@ -100,7 +100,7 @@ def get_new_query(original_query,updated_query):
 
     pass
 
-def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback, alpha=1.2, beta=0.8, gamma=1):
+def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback, alpha=1, beta=0.9, gamma=1):
     """
     Relevance Feedback Function
     Description:
@@ -146,6 +146,7 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
         term_weight = (
             alpha * original_query_vector.get(term, 0) 
             + 
+
             beta * relevant_feedback_vector.get(term, 0) * 1 / relevant_docs_length 
 
             - 
