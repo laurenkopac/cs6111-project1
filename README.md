@@ -19,12 +19,12 @@ Amari Byrd (ab5311) and Lauren Kopac (ljk2148)
 Navigate to the project 1 folder in Google Cloud:
 
 ```
-source /home/ab5311/Project1
+$ source /home/ab5311/Project1
 ```
 In the Project1 directory, run:
 
 ```
-python3 feedback.py <json api key> <google engine id> <precision> <query in quotation marks>
+$ python3 feedback.py <json api key> <google engine id> <precision> <query in quotation marks>
 ```
 
 ### CMD Parameters
