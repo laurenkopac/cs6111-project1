@@ -9,8 +9,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 ## Import the nltk library for a list of english stop-words
 import nltk
 from nltk.corpus import stopwords
+from nltk.stem import RegexpStemmer
+
 
 nltk.download('stopwords')
+nltk.download('pinkt')
 
 # Get the list of English stop words, save unique values in a set
 STOP_WORDS = set(stopwords.words('english'))
@@ -59,12 +62,15 @@ def clean_terms(text):
                 text = text.split('-')[0]
         except:
             pass
+
     # Remove non-alphanumeric characters
     cleaned_text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
 
+    # Initialize the Porter Stemmer to stem plural terms
+    stemmer = RegexpStemmer('s$', min=4)
+    cleaned_text = stemmer.stem(cleaned_text)
+
     return cleaned_text.lower()
-
-
 
 def calculate_tf_idf(documents):
     """
@@ -74,8 +80,8 @@ def calculate_tf_idf(documents):
     Returns term vector as a dictionary containing the tf-idf score for each word in the document ((word:tf-idf score))
     """
      
-    #calculate the idf_score for vector
-    vectorizer = TfidfVectorizer(analyzer='word')
+    #calculate the idf_score for vector, use english stop words
+    vectorizer = TfidfVectorizer(analyzer='word',stop_words='english')
     tfidf_matrix = vectorizer.fit_transform(documents)
 
     # get term words
@@ -100,7 +106,7 @@ def get_new_query(original_query,updated_query):
 
     pass
 
-def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback, alpha=1, beta=0.9, gamma=1):
+def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback, alpha=1, beta=0.9, gamma=.1):
     """
     Relevance Feedback Function
     Description:
@@ -161,7 +167,7 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
     sorted_terms = sorted(updated_query_vector.items(), key=lambda x: x[1], reverse=True)
 
     # Take the top two terms that were not in the original query
-    top_two_terms = [(term,weight) for term, weight in sorted_terms if term not in original_query][:2]
+    top_two_terms = [(term,weight) for term, weight in sorted_terms if term not in [clean_terms(term) for term in original_query]][:2]
 
     # Bring in the original query terms
     augmented_terms = top_two_terms + [(term, weight) for term, weight in sorted_terms if term in original_query]
@@ -215,7 +221,6 @@ def search(query,target, api_key, cx, k_results=10):
           for i, result in enumerate(json['items'], 1):
                 # Return only HTML results for user
                     if result.get('fileFormat') is None:
-                        print("blah123")
                         # Increase qualified results counter
                         qualified_results += 1
                         print(f"Result {i}")
