@@ -24,8 +24,13 @@ source /home/ab5311/Project1
 In the Project1 directory, run:
 
 ```
-python3 feedback.py <json api key> <google engine id> <precision> <query in quotation>"
+python3 feedback.py <json api key> <google engine id> <precision> <query in quotation marks>
 ```
+
+### CMD Parameters
+* `precision`: must be a real number between 0 and 1 (can include 1 for perfect precision).
+* `query in quotation marks`: must an intentionally ambigious search keyword or phrase within quotation marks (i.e. "per se").
+  
 ## Internal Design
 Our program is designed to take 4 arguments passed through the command line by the user: `JSON API KEY`, `GOOGLE SEARCH ENGINE KEY`, `precision@K`, and `a query in quotation marks`. When valid parameters are passed, the program proceeds by...
 
