@@ -12,7 +12,7 @@ Amari Byrd (ab5311) and Lauren Kopac (ljk2148)
 |Key Name | Key|
 |---------|------------|
 |JSON API KEY| `AIzaSyBHRHOxxGtFuRU3bfpVkGKc29_R8jN6Gu8`|
-|Google Search Engine Key|`83cef68fbbe834498`|
+|Google Search Engine Key|`f2d45d63dda814dd6`|
 
 ## How to Use
 Navigate to the project 1 folder in Google Cloud:
