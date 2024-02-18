@@ -32,25 +32,40 @@ $ python3 feedback.py <json api key> <google engine id> <precision> <query in qu
 **Note:** `precision` must be a real number between 0 and 1 (can include 1 for perfect precision) and `query in quotation marks` must be an intentionally ambigious search keyword or phrase within quotation marks (i.e. "per se").
   
 ## Internal Design
-Our program is designed to take 4 arguments passed through the command line by the user: `JSON API KEY`, `GOOGLE SEARCH ENGINE KEY`, `precision@K`, and `a query in quotation marks`. When valid parameters are passed, the program proceeds with three main components and their associated methods:
+Our program is designed to take 4 arguments passed through the command line by the user: `JSON API KEY`, `GOOGLE SEARCH ENGINE KEY`, `precision`, and `a query in quotation marks`. When valid parameters are passed, the program proceeds with three main components and their associated methods:
 
 |Phase| Component | Description |Associated Methods|
 |---------|---------|------------|------------|
-|1|Retrieval of Google Search Results for User | The program will first accept a set of parameters from the user. If valid, the program will print back the parameters for the user in the terminal. Next, an API call will be made to Google's custom search engine using the keys listed above. One API call will be made per iteration of collecting relevance feedback (i.e. returning 10 results, displaying one at a time, will count as one iteration and therefore one API call).| <ul><li>`cmd_line()`</li><li>`search(query,target,api_key,cx,k_results=10)`</li><li>`query_print_cmd(api_key, cx, query, target)`</li></ul>|
+|1|Retrieval and presentation of Google Search Results for user | The program will first accept a set of parameters from the user. If valid, the program will print back the parameters for the user in the terminal. Next, an API call will be made to Google's custom search engine. One API call will be made per iteration of collecting relevance feedback (i.e. returning 10 results (displayed one at a time) will count as one iteration and therefore one API call). The API call processes and returns only HTML results back for the user (see section below on how non-HTML results are handled). | <ul><li>`cmd_line()`</li><li>`search(query,target,api_key,cx,k_results=10)`</li><li>`query_print_cmd(api_key, cx, query, target)`</li></ul>|
+|2| Relevance feedback collection |One at a time, the user must decide if the result is relevant or not to their query. Relevant and non-relevant results are sorted and stored accordingly, pulling text from result titles and summaries. **Possible outcomes:** If, after the inital search, the desired precision is reached, the program will exit. If no results at all are marked as relevant, the program will exit and ask the user to try a new query. If no results are fetched, the program will exit and ask the user to try again. If results are turned, but do not meet the precision requirements, the program will move to the next phase of query augmentation.| Relevance feedback is collected from the user within the `search()` method as results are displayed following an API call to Google.|
+|3| Query Augmentation | After the results have been saved and sorted as either relevant or nonrelevant, terms are passed through `relevance_feedback()` method, which calls upon `clean_terms()` and `calculate_tf_idf()` to determine and extract two terms to best augment the original query for the user. See Query Modification Method section below for more details. The augmented query, which will always contain the original query, will then be used to call `search()` until the desired precision is reached or the program reaches another exit contition.| <ul><li>`relevance_feedback(original_query, relevant_feedback, non_relevant_feedback, alpha=1, beta=0.9, gamma=.1)`</li><li>`clean_terms(text)`</li><li>`calculate_tf_idf(documents)`</li></ul>|
 
 ### Custom Methods
 |Method | Params |Description |
 |---------|------------|------------|
 |`cmd_line()`| `None`| Take arguments from the user via the command line. Assert that: <ul><li>The correct number of arguments have been passsed to run the program</li><li>Precision provided is a real number between 0 and 1 inclusive</li><li>Query is not empty</li></ul>|
 |`search(query,target,api_key,cx,k_results=10)`| <ul><li>`query` - user provided query</li><li>`target` - user provided desired precision</li><li>`api_key` - JSON API Key (see Keys section above)</li><li> `cx` - Google Search Engine Key (see Keys section above)</li><li>`k_results` - number of results returned by API call (default set to 10)</li></ul>| API call to Google Search results for user inputed query. Takes user inputed keys, query, and desired precision (real number 0-1). Returns query results to user for relevance feedback.|
-
-
-1. Making a call to Google for a custom search on the query
-2. Returning results (max 10) to the user for relevance feedback one-by-one. **Note:** results will only be presented to the user if they are HTML (not PDT, PowerPoint, `.csv`, etc.). The number of valid results given to the user are iteratively counted as they are processed.
-3. Asking the used to asses each result as relevant ('Y') or non-relevant ('N') to their query. The number of relevant results are counted to later calculate percision (# of relevant results / # of results returned). 
+|`relevance_feedback(original_query, relevant_feedback, non_relevant_feedback, alpha=1, beta=0.9, gamma=.1)`|<ul><li>`original_query` - original query inputed by the user through the command line or most recently used augmented query</li><li>`relevant_feedback` - list of raw text from results deemed relevant to the user</li><li>`non_relevant_feedback` - list of raw text from results deemed not relevant</li><li>`alpha` - value for the Rocchio algo, default to 1</li><li>`beta` - value for the Rocchio algo, set to .9</li><li>`gamma` - value for the Rocchio algo - set to .1</li></ul>|
 
 ### Non-HTML Result Handling
+Results will only be presented to the user if they are HTML (not PDT, PowerPoint, `.csv`, etc.). 
 
+We weed out these unwanted filed types by relying on the JSON field `fileFormat` from the returned resutls of our API calls. In the case where the result is not some unwanted filetype, and is instead an HTML result, this field will be `None`.
+
+```python
+# Return only HTML results for user
+if result.get('fileFormat') is None:
+  # Increase qualified results counter
+  qualified_results += 1
+  print(f"Result {i}")
+  print("[")
+  print(f"URL: {result['link']}")
+  print(f"Title: {result['title']}")
+  print(f"Summary: {result.get('snippet', 'No summary available')}")
+  print("]")
+  print()
+  feedback = input("Relevant (Y/N)? ")
+```
 
 
 ### Fixed Values and Parameters
@@ -69,9 +84,11 @@ Our programs relies on the following Python frameworks:
 |`re`| Used to clean search results into more uniform terms byt dropping punctuation and other non-alphanumeric characters.|
 |`requests`| Used in the `search()` function to make a call Google's custom search engine API. Responses converted to JSON for processing.|
 |`sklearn`|Using `TfidfVectorizer` to calculate tf-idf score for each term in returned results and generate a term vector.|
-|`nltk`| Used to collect English stopwords for stopword elimination from term list.|
+|`nltk`| Used to collect English stopwords for stopword elimination from term list. Also used for stemming terms with `RegexpStemmer`|
 
 ## Query Modification Method
+
+Our query modification is handled in a few methods inspiried by idologies from lecture and the textbook.
 
 ## External References
 1. Manning, Raghavan, & Schütze. Stanford University. (2009). Information Retrieval and Web Search (Online Edition) - Chapter 9: Query Operations. Retrieved from https://nlp.stanford.edu/IR-book/pdf/09expand.pdf
