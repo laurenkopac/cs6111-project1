@@ -88,6 +88,8 @@ Our programs relies on the following Python frameworks:
 
 ## Query Modification Method
 
+Our query modification is handled in a few methods inspiried by idologies from lecture and the textbook.
+
 ## External References
 1. Manning, Raghavan, & Schütze. Stanford University. (2009). Information Retrieval and Web Search (Online Edition) - Chapter 9: Query Operations. Retrieved from https://nlp.stanford.edu/IR-book/pdf/09expand.pdf
 
