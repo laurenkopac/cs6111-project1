@@ -10,6 +10,7 @@ Amari Byrd (ab5311) and Lauren Kopac (ljk2148)
 |`feedback.py`| Project 1 `.py` file|
 |`README.pdf` | PDF version of `README.md` file on Github|
 |`transcript.pdf`| PDF transcript of test case results |
+|`requirements.txt`|packages required for the program|
 
 
 ## API Keys
