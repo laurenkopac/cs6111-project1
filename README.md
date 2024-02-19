@@ -9,8 +9,8 @@ Amari Byrd (ab5311) and Lauren Kopac (ljk2148)
 |---------|------------|
 |`feedback.py`| Project 1 `.py` file|
 |`README.pdf` | PDF version of `README.md` file on Github|
-|`transcript.pdf`| PDF transcript of test case results |
-|`requirements.txt`|packages required for the program|
+|`transcript.txt`| Text file transcript of test case results |
+|`requirements.txt`| Packages required for the program|
 
 
 ## API Keys
@@ -20,12 +20,7 @@ Amari Byrd (ab5311) and Lauren Kopac (ljk2148)
 |Google Search Engine Key|`f2d45d63dda814dd6`|
 
 ## How to Use
-Navigate to the project 1 folder in Google Cloud:
-
-```bash
-$ source /home/ab5311/Project1
-```
-In the Project1 directory, first make sure to set the requirements:
+Navigate to the project's root file and run the following to install needed packages:
 
 ```bash
 $ pip install -r requirements.txt
