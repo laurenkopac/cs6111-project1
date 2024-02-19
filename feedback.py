@@ -111,6 +111,7 @@ def reorder_query(query,relevant_document):
     Description: Generate new query by creating bigrams from all permutations of the query and finding the tf-idf score for each bigram vs all relevant documents
     Takes  query, the current query passed to api and updated query,  results from Rocchio's algorithm 
     Returns best ordered permutation of the query, based on highest tf-idf score
+     credit: https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.CountVectorizer.html
     """
 
     # join all relevant documents into one string
@@ -174,9 +175,6 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
     Takes alpha, beta, alpha, beta, and gamma for Rocchio's algorithm (1, 0.9, 0.1)
     Returns updated query, the new query including two new words to be used in the next search (the best query that leans more towards relevant search results)
     """
-    # Initialize the number of relevant and non-relevant docs
-    relevant_docs_length = len(relevant_feedback)
-    non_relevant_docs_length = len(non_relevant_feedback)
     
      # Clean the terms in the relevant and non-relevant feedback arrays (remove stop words, stemming) and store them in a list of terms ['per', 'se', ...]
     original_query = [term.lower() for text in original_query for term in text.split()]
@@ -188,6 +186,9 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
                              if ((term.lower() not in STOP_WORDS) & (len(term) > 1) & (term not in string.punctuation) & (term != "..."))]
     
 
+    # Initialize the number of relevant and non-relevant docs
+    relevant_docs_length = len(relevant_feedback)
+    non_relevant_docs_length = len(non_relevant_feedback)
 
     # # Initalize dictionary for relevant term frequencies
     frequency_count = {}
@@ -195,29 +196,7 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
     for term in relevant_feedback:
         # Using get method to handle the case where the word is not in the dictionary
         frequency_count[term] = frequency_count.get(term, 0) + 1
-
-   #TODO: DELETE THIS LATER
-    #---------------------------------------------------------------------------------------------
-
-    # for term in relevant_feedback:
-    #     # Using get method to handle the case where the word is not in the dictionary
-    #     frequency_count[term] = frequency_count.get(term, 0) + 1
-
-    # #Create vectors for the original query, relevant, and non-relevant feedback
-    # original_query_vector = {}
-    # relevant_feedback_vector = {}
-    # non_relevant_feedback_vector = {}
-
-    # for term in original_query:
-    #     original_query_vector[term] = original_query_vector.get(term, 0) + 1
-
-    # for term in relevant_feedback:
-    #     relevant_feedback_vector[term] = relevant_feedback_vector.get(term, 0) + 1
-
-    # for term in non_relevant_feedback:
-    #     non_relevant_feedback_vector[term] = non_relevant_feedback_vector.get(term, 0) + 1
-    #---------------------------------------------------------------------------------------------
-        
+  
     # Create term vectors for the original query, relevant, and non-relevant feedback
     original_query_vector = calculate_tf_idf(original_query)
     relevant_feedback_vector = calculate_tf_idf(relevant_feedback)
@@ -231,10 +210,10 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
             alpha * original_query_vector.get(term, 0) # Original query component
             + 
             
-            beta * relevant_feedback_vector.get(term, 0) * 1 / relevant_docs_length  #  relevant document component
+            beta * ( 1 / relevant_docs_length)  * relevant_feedback_vector.get(term, 0)  #  relevant document component
 
             - 
-            gamma * non_relevant_feedback_vector.get(term, 0) * 1 / non_relevant_docs_length # non-relevant document component
+            gamma * ( 1 / non_relevant_docs_length) * non_relevant_feedback_vector.get(term, 0)  # non-relevant document component
             
             + 
             frequency_count.get(term,0) # give extra weight to frequent relevant terms 
@@ -250,44 +229,18 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
     # Take the top two terms that were not in the original query
     # prevent duplicates from original query and stem terms ('apples','apple') in the new query -> [term for term in original_query] + [clean_terms(term) for term in original_query]
   
-    ### TODO: DELETE THIS LATER
-      #---------------------------------------------------------------------------------------------
-    # top_two_terms = [(term,weight) for term, weight in sorted_terms if term not in 
-    #                  ([term for term in original_query] + [clean_terms(term) for term in original_query])][:2]
-      #---------------------------------------------------------------------------------------------
-
     top_two_terms = [term for term, _ in sorted_terms if term not in 
                      ([term for term in original_query] + [clean_terms(term) for term in original_query])][:2]
     
     # join the new top two terms with original query terms to represent the new query terms
-    
-     ### TODO: DELETE THIS LATER
-      #---------------------------------------------------------------------------------------------
-    #augmented_terms = top_two_terms + [(term, weight) for term, weight in sorted_terms if term in original_query]
-      #---------------------------------------------------------------------------------------------
-    
+
     augmented_terms = top_two_terms + [term for term, _ in sorted_terms if term in original_query]
     
     # reorder the terms to find the final augmented query using bigrams and tf-idf weighting
 
     augmented_query = reorder_query(augmented_terms, relevant_feedback)
-  
 
-     ## DELETE THIS LATER
-    #---------------------------------------------------------------------------------------------
-    # # Sort new query terms by their weights
-    # new_sorted_terms = sorted(augmented_terms, key=lambda x: x[1], reverse=True)
-
-    # # Create the final augmented query
-    # #augmented_query = ' '.join([term for term, _ in new_sorted_terms])
-    #---------------------------------------------------------------------------------------------
-
-    # Combines the two new query terms (used to display to user the chosen terms in next iteration i.e. Augmented by restuarant newyork)
-    
-     ### TODO: DELETE THIS LATER
-      #---------------------------------------------------------------------------------------------
-    #new_augmented_terms = ' '.join([term for term, _ in top_two_terms])
-      #---------------------------------------------------------------------------------------------
+    # Combine the two new query terms (used to display to user the chosen terms in next iteration i.e. Augmented by restuarant newyork)
 
     new_augmented_terms = ' '.join(top_two_terms)
 
@@ -338,29 +291,34 @@ def search(query,target, api_key, cx, k_results=10):
                         qualified_results += 1
                         print(f"Result {i}")
                         print("[")
-                        print(f"URL: {result['link']}")
-                        print(f"Title: {result['title']}")
-                        print(f"Summary: {result.get('snippet', 'No summary available')}")
+                        print(f" URL: {result['link']}")
+                        print(f" Title: {result['title']}")
+                        print(f" Summary: {result.get('snippet', 'No summary available')}")
                         print("]")
                         print()
-                        feedback = input("Relevant (Y/N)? ")
+                        feedback = input("Relevant (Y/N)?")
 
                     # Convert feedback to lower in case user enters inconsistently, remove accidental spaces
                     ## If user indicates relevant link - save title to relevant list
                 
-                    if feedback.strip().lower() == 'y':
+                    if feedback.strip().lower() == 'y' or feedback.strip().lower() == 'yes':
                         relevant_links += 1
                         relevant_results.append(result['title'])
                         relevant_results.append(result.get('snippet'))
 
-                    else:
+                    elif feedback.strip().lower() == 'n' or feedback.strip().lower() == 'no':
                         non_relevant_results.append(result['title'])
                         non_relevant_results.append(result.get('snippet'))
+                    
+                    elif feedback.strip().lower() == '':
+                        print("Invalid feedback. Feedback empty")
+                        sys.exit(1)
+                    
 
           # check if there was any relevant results indicated by user, if not exit
           augmented_query = ""
           if qualified_results == 0:
-              print("===================================================")
+              print("======================")
               print("FEEDBACK SUMMARY")
               print(f"Query {query} ")
               print(f"HTML results found: {qualified_results} ")  
@@ -370,18 +328,25 @@ def search(query,target, api_key, cx, k_results=10):
           # Calculate precision now that we know qualified_results will not be 0
           percision = round((relevant_links / qualified_results),1)
 
+          # If number of relevant results indicated by user is 0 ,
+          #(program has not found any good results terminate progam), display summary and exit
+          augmented_terms = ""
+
           if relevant_links == 0:
-            print("===================================================")
+            print("======================")
             print("FEEDBACK SUMMARY")
             print(f"Query {query} ")
             print(f"Precision {percision}")
-            print(f"Number of relevant results: {relevant_links}.")
-            print("Below desiered precision, but cannot augment the query with 0 relevant results")
+            print(f"Still below the desired percision of {target}.")
+            print("Indexing results....")
+            print("Indexing results....")
+            print(f"Augmented by {augmented_terms}")
+            print(f"Below desired precision, but can no longer augment the query")
             sys.exit(0)   
 
           # If number of relevant results is less than user inputed target, rerun search
           if percision < target:
-            print("===================================================")
+            print("======================")
             print("FEEDBACK SUMMARY")
             print(f"Precision {percision}")
             print(f"Still below the desired percision of {target}.")
@@ -400,7 +365,7 @@ def search(query,target, api_key, cx, k_results=10):
 
           # Desired precision reached. Exit
           else:
-            print("===================================================")
+            print("======================")
             print("FEEDBACK SUMMARY")
             print(f"Precision {percision}")
             print(f"Desired precision reached.")
@@ -417,8 +382,8 @@ def query_print_cmd(api_key, cx, query, percision):
     Description: Display keys and current query to user (parameters and result line to be displayed before each search)
     """
     print('Parameters:')
-    print(f"Client Key = {api_key}")
-    print(f"Engine Key = {cx}")
+    print(f"Client key = {api_key}")
+    print(f"Engine key = {cx}")
     print(f"Query      = {query}")
     print(f"Precision  = {percision}")
     print(f"Google Search Results:")
