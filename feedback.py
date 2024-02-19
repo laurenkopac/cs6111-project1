@@ -79,7 +79,7 @@ def clean_terms(text):
 
     return cleaned_text.lower()
 
-def calculate_tf_idf(documents):
+def calculate_tf_idf(documents, vectorizer):
     """
     Search Function
     Description: Calculates tf-idf score for each word in the document during the relevance feedback
@@ -89,11 +89,11 @@ def calculate_tf_idf(documents):
     credit: https://stackoverflow.com/questions/53294482/how-to-get-tf-idf-scores-for-the-words
     """
      
-    # create tf-idf vectorizer to calculate tf-idf score
-    vectorizer = TfidfVectorizer()
+    # # create tf-idf vectorizer to calculate tf-idf score
+    # vectorizer = TfidfVectorizer()
 
     # calculate tf-idf score for each word in the document (non-relevant, relevant, and original query)
-    tfidf_vectors = vectorizer.fit_transform(documents)
+    tfidf_vectors = vectorizer.transform(documents)
 
     # get term words
     document_word = vectorizer.get_feature_names_out()
@@ -123,7 +123,7 @@ def reorder_query(query,relevant_document):
     query_perm = dict((' '.join(word), None) for word in permutations(query))
 
     # create tf-idf vectorizer to calculate tf-idf score in bigrams
-    tfidf_vectorizer = TfidfVectorizer(ngram_range=(2,2))
+    tfidf_vectorizer = TfidfVectorizer(ngram_range=(2,2), sublinear_tf=True)
 
     # calculate tf-idf score for each bigram in the relevant document
     _ = tfidf_vectorizer.fit([combined_relevant_docs])
@@ -195,11 +195,18 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
     for term in relevant_feedback:
         # Using get method to handle the case where the word is not in the dictionary
         frequency_count[term] = frequency_count.get(term, 0) + 1
+        
   
+     # create tf-idf vectorizer to calculate tf-idf score
+    vectorizer = TfidfVectorizer(use_idf=True, sublinear_tf=True)
+
+    # calculate tf-idf score for each word in the document with a  (non-relevant, relevant)
+    tfidf_vectors = vectorizer.fit_transform(relevant_feedback + non_relevant_feedback)
+
     # Create term vectors for the original query, relevant, and non-relevant feedback
-    original_query_vector = calculate_tf_idf(original_query)
-    relevant_feedback_vector = calculate_tf_idf(relevant_feedback)
-    non_relevant_feedback_vector = calculate_tf_idf(non_relevant_feedback)
+    original_query_vector = calculate_tf_idf(original_query, vectorizer)
+    relevant_feedback_vector = calculate_tf_idf(relevant_feedback, vectorizer)
+    non_relevant_feedback_vector = calculate_tf_idf(non_relevant_feedback, vectorizer)
     
     # Update the query using Rocchio's algorithm
     updated_query_vector = {}
@@ -221,13 +228,13 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
         # Set the new term weight to 0 if it is less than 0 else set it to the new term weight (remove negative values)
         updated_query_vector[term] = max(0, term_weight)
 
-    # Sort the terms in the updated query by weight in descending order
-    sorted_terms = sorted(updated_query_vector.items(), key=lambda x: x[1], reverse=True)
+    # Sort the terms in the updated query by weight in descending order, if the tie then sort by lexigraphic order
+    sorted_terms = sorted(updated_query_vector.items(), key=lambda x: (x[1], x[0]), reverse=True)
     
 
     # Take the top two terms that were not in the original query
     # prevent duplicates from original query and stem terms ('apples','apple') in the new query -> [term for term in original_query] + [clean_terms(term) for term in original_query]
-  
+    
     top_two_terms = [term for term, _ in sorted_terms if term not in 
                      ([term for term in original_query] + [clean_terms(term) for term in original_query])][:2]
     
