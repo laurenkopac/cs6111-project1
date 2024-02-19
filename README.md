@@ -50,7 +50,7 @@ Our program is designed to take 4 arguments passed through the command line by t
 ### Non-HTML Result Handling
 Results will only be presented to the user if they are HTML (not PDT, PowerPoint, `.csv`, etc.). 
 
-We weed out these unwanted filed types by relying on the JSON field `fileFormat` from the returned resutls of our API calls. In the case where the result is not some unwanted filetype, and is instead an HTML result, this field will be `None`. If the field is not at all present in the JSON retrieved, the program will also proceed in showing the user results.
+We weed out these unwanted filed types by relying on the JSON field `fileFormat` [2] from the returned resutls of our API calls. In the case where the result is not some unwanted filetype, and is instead an HTML result, this field will be `None`. If the field is not at all present in the JSON retrieved, the program will also proceed in showing the user results.
 
 ```python
 # Return only HTML results for user
