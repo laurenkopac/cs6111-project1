@@ -40,17 +40,10 @@ Our program is designed to take 4 arguments passed through the command line by t
 |2| Relevance feedback collection |One at a time, the user must decide if the result is relevant or not to their query. Relevant and non-relevant results are sorted and stored accordingly, pulling text from result titles and summaries. **Possible outcomes:** If, after the inital search, the desired precision is reached, the program will exit. If no results at all are marked as relevant, the program will exit and ask the user to try a new query. If no results are fetched, the program will exit and ask the user to try again. If results are turned, but do not meet the precision requirements, the program will move to the next phase of query augmentation.| Relevance feedback is collected from the user within the `search()` method as results are displayed following an API call to Google.|
 |3| Query Augmentation | After the results have been saved and sorted as either relevant or nonrelevant, terms are passed through `relevance_feedback()` method, which calls upon `clean_terms()` and `calculate_tf_idf()` to determine and extract two terms to best augment the original query for the user. See Query Modification Method section below for more details. The augmented query, which will always contain the original query, will then be used to call `search()` until the desired precision is reached or the program reaches another exit contition.| <ul><li>`relevance_feedback(original_query, relevant_feedback, non_relevant_feedback, alpha=1, beta=0.9, gamma=.1)`</li><li>`clean_terms(text)`</li><li>`calculate_tf_idf(documents)`</li></ul>|
 
-### Custom Methods
-|Method | Params |Description |
-|---------|------------|------------|
-|`cmd_line()`| `None`| Take arguments from the user via the command line. Assert that: <ul><li>The correct number of arguments have been passsed to run the program</li><li>Precision provided is a real number between 0 and 1 inclusive</li><li>Query is not empty</li></ul>|
-|`search(query,target,api_key,cx,k_results=10)`| <ul><li>`query` - user provided query</li><li>`target` - user provided desired precision</li><li>`api_key` - JSON API Key (see Keys section above)</li><li> `cx` - Google Search Engine Key (see Keys section above)</li><li>`k_results` - number of results returned by API call (default set to 10)</li></ul>| API call to Google Search results for user inputed query. Takes user inputed keys, query, and desired precision (real number 0-1). Returns query results to user for relevance feedback.|
-|`relevance_feedback(original_query, relevant_feedback, non_relevant_feedback, alpha=1, beta=0.9, gamma=.1)`|<ul><li>`original_query` - original query inputed by the user through the command line or most recently used augmented query</li><li>`relevant_feedback` - list of raw text from results deemed relevant to the user</li><li>`non_relevant_feedback` - list of raw text from results deemed not relevant</li><li>`alpha` - value for the Rocchio algo, default to 1</li><li>`beta` - value for the Rocchio algo, set to .9</li><li>`gamma` - value for the Rocchio algo - set to .1</li></ul>|
-
 ### Non-HTML Result Handling
 Results will only be presented to the user if they are HTML (not PDT, PowerPoint, `.csv`, etc.). 
 
-We weed out these unwanted filed types by relying on the JSON field `fileFormat` from the returned resutls of our API calls. In the case where the result is not some unwanted filetype, and is instead an HTML result, this field will be `None`.
+We weed out these unwanted filed types by relying on the JSON field `fileFormat` from the returned resutls of our API calls. In the case where the result is not some unwanted filetype, and is instead an HTML result, this field will be `None`. If the field is not at all present in the JSON retrieved, the program will also proceed in showing the user results.
 
 ```python
 # Return only HTML results for user
@@ -91,7 +84,16 @@ Our programs relies on the following Python frameworks:
 
 Our query modification is handled in a few methods inspiried by idologies from lecture and the textbook.
 
+1. We decided to give extra weight to (cleaned and stemmed) terms that appear frequently in the result title/summary. If non-stop words are appearing frequently here, we believe it to be a strong indication that the term is important and should be heavily considered for the query.
+2. Using `calculate_tf_idf()`, we create vectors to store terms and their calculated weights based on `sklearn` and the `Tfidfvectorizer` method [4]. Using the tf-idf method, we assign each cleaned term a score. English stopwords are excluded from contention.
+3. Next, we use the Rocchio algorithm [1] to further score our cleaned terms, setting our alpha, beta, and gamma weights to 1, .9 and .1 respectively - a slight difference from how Rocchio is presented in the textbook.
+4. After scores are assigned to all terms, we reorder them using `intertools` and `permutations` to generate all possible arrangements and determine the highest scoring. [5]
+
 ## External References
 1. Manning, Raghavan, & Schütze. Stanford University. (2009). Information Retrieval and Web Search (Online Edition) - Chapter 9: Query Operations. Retrieved from https://nlp.stanford.edu/IR-book/pdf/09expand.pdf
 
-2. “Custom Search JSON API  |  Google for Developers.” Google, Google, developers.google.com/custom-search/v1/reference/rest/v1/Search. Accessed 10 Feb. 2024. 
+2. “Custom Search JSON API  |  Google for Developers.” Google, Google, developers.google.com/custom-search/v1/reference/rest/v1/Search. Accessed 10 Feb. 2024.
+  
+4. “Sklearn.Feature_extraction.Text.TfidfVectorizer.” Scikit, scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html. Accessed 10 Feb. 2024.
+   
+6. “Sklearn.Feature_extraction.Text.CountVectorizer.” Scikit, scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.CountVectorizer.html. Accessed 18 Feb. 2024. 
