@@ -54,7 +54,7 @@ We weed out these unwanted filed types by relying on the JSON field `fileFormat`
 
 ```python
 # Return only HTML results for user
-if result.get('fileFormat') is None:
+ if ((result.get('fileFormat') is None) | ('fileFormat' not in json)):
   # Increase qualified results counter
   qualified_results += 1
   print(f"Result {i}")
@@ -83,8 +83,9 @@ Our programs relies on the following Python frameworks:
 |`sys`| Used to get arguments from the command line (i.e. JSON API key, Google Search Engine Key, Percision, Query).|
 |`re`| Used to clean search results into more uniform terms byt dropping punctuation and other non-alphanumeric characters.|
 |`requests`| Used in the `search()` function to make a call Google's custom search engine API. Responses converted to JSON for processing.|
-|`sklearn`|Using `TfidfVectorizer` to calculate tf-idf score for each term in returned results and generate a term vector.|
+|`sklearn`|Using `TfidfVectorizer` to calculate tf-idf score for each term in returned results and generate a term vector. Also using `CountVectorizer` to create count vectorizer for creating bigrams|
 |`nltk`| Used to collect English stopwords for stopword elimination from term list. Also used for stemming terms with `RegexpStemmer`|
+|`intertools` |Using `permutations` to aid in finding the best word arrangement in the augmented query|
 
 ## Query Modification Method
 
