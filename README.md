@@ -25,7 +25,13 @@ Navigate to the project 1 folder in Google Cloud:
 ```bash
 $ source /home/ab5311/Project1
 ```
-In the Project1 directory, run:
+In the Project1 directory, first make sure to set the requirements:
+
+```bash
+$ pip install -r requirements.txt
+```
+
+To run the program, enter the following into the command line within the Project1 directory:
 
 ```bash
 $ python3 feedback.py <json api key> <google engine id> <precision> <query in quotation marks>
