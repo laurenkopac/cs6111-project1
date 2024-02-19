@@ -15,7 +15,6 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem import RegexpStemmer
 
-
 nltk.download('stopwords')
 nltk.download('pinkt')
 
@@ -286,7 +285,7 @@ def search(query,target, api_key, cx, k_results=10):
           # Loop through each search result one at a time, ask user for feedback
           for i, result in enumerate(json['items'], 1):
                 # Return only HTML results for user
-                    if result.get('fileFormat') is None:
+                    if ((result.get('fileFormat') is None) | ('fileFormat' not in json)):
                         # Increase qualified results counter
                         qualified_results += 1
                         print(f"Result {i}")
