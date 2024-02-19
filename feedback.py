@@ -200,7 +200,7 @@ def relevance_feedback(original_query, relevant_feedback, non_relevant_feedback,
      # create tf-idf vectorizer to calculate tf-idf score
     vectorizer = TfidfVectorizer(use_idf=True, sublinear_tf=True)
 
-    # calculate tf-idf score for each word in the document with a  (non-relevant, relevant)
+    # calculate tf-idf score for each word in the document with a databse of both (non-relevant, relevant)
     tfidf_vectors = vectorizer.fit_transform(relevant_feedback + non_relevant_feedback)
 
     # Create term vectors for the original query, relevant, and non-relevant feedback
